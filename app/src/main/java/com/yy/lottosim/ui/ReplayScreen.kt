@@ -64,7 +64,7 @@ fun ReplayScreen(
             Column {
                 Text("历史回放", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "用真实历史开奖号码，快速跑完你设定的购彩策略，看看十年下来到底是赚是亏",
+                    "用真实历史开奖号码，帮汪苏蕊把购彩梦想快进十年——看看她的坚持到底能不能换来大奖",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -205,7 +205,7 @@ private fun NumberPicker(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                "我的守号（前区选 ${fixedFront.size}/5，后区选 ${fixedBack.size}/2）",
+                "汪苏蕊的幸运守号（前区选 ${fixedFront.size}/5，后区选 ${fixedBack.size}/2）",
                 style = MaterialTheme.typography.bodyMedium
             )
             androidx.compose.material3.OutlinedButton(
@@ -299,7 +299,7 @@ fun ReportCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("模拟报告", style = MaterialTheme.typography.titleLarge)
+            Text("汪苏蕊的模拟报告", style = MaterialTheme.typography.titleLarge)
             Text(
                 if (mode == SimMode.FIXED)
                     "守号 ${LottoRules.formatNote(fixedFront, fixedBack)}"
@@ -318,23 +318,24 @@ fun ReportCard(
                 else MaterialTheme.colorScheme.error
             )
 
-            // 概览
+            // 概览：税前 → 个税 → 到手
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatCell("参与期数", "${result.totalDraws} 期")
-                StatCell("总购买", "${formatCount(result.totalNotes)} 注")
                 StatCell("总投入", formatMoney(result.totalCost))
-                StatCell("总中奖", formatMoney(result.totalWin))
+                StatCell("税前总中奖", formatMoney(result.grossWin))
+                StatCell("代扣个税", "-" + formatMoney(result.totalTax))
+                StatCell("实际到手", formatMoney(result.totalWin))
             }
             Text(
-                "回报率 ${(result.returnRate * 100).toFixed(1)}% · 耗时 ${(result.elapsedMs / 1000.0).toFixed(1)} 秒",
+                "参与 ${result.totalDraws} 期 · 购买 ${formatCount(result.totalNotes)} 注\n" +
+                    "回报率 ${(result.returnRate * 100).toFixed(1)}%（按税后到手计） · 耗时 ${(result.elapsedMs / 1000.0).toFixed(1)} 秒",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             HorizontalDivider()
 
-            // 奖级明细
-            Text("中奖明细", style = MaterialTheme.typography.titleMedium)
+            // 奖级明细（税前）
+            Text("中奖明细（金额为税前）", style = MaterialTheme.typography.titleMedium)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (level in 1..9) {
                     val cnt = result.prizeCounts[level]
@@ -361,7 +362,7 @@ fun ReportCard(
             if (result.bigWins.isNotEmpty()) {
                 HorizontalDivider()
                 Text(
-                    "🎉 中大奖了（一/二等奖）",
+                    "🎉 汪苏蕊中大奖了！（一/二等奖）",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -375,7 +376,7 @@ fun ReportCard(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            "${LottoRules.levelName(bw.level)} ×${bw.count} 注 · ${formatMoney(bw.amountPerNote * bw.count)}",
+                            "${LottoRules.levelName(bw.level)} ×${bw.count} 注\n单注 ${formatMoney(bw.amountPerNote)}（税后 ${formatMoney(LottoRules.netOfTax(bw.amountPerNote))}）",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -385,7 +386,7 @@ fun ReportCard(
             } else {
                 HorizontalDivider()
                 Text(
-                    "💥 ${result.totalDraws} 期 × ${formatCount(result.totalNotes)} 注，一次一/二等奖都没摸到。\n" +
+                    "💥 汪苏蕊买了 ${result.totalDraws} 期共 ${formatCount(result.totalNotes)} 注，一次一/二等奖都没摸到。\n" +
                         "（一等奖单注概率 1/${formatCount(LottoRules.TOTAL_COMBINATIONS)}，这是常态）",
                     style = MaterialTheme.typography.bodyMedium
                 )

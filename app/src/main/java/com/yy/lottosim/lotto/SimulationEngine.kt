@@ -31,9 +31,11 @@ data class SimResult(
     val totalDraws: Int,        // 参与期数
     val totalNotes: Long,       // 总注数
     val totalCost: Long,        // 总投入（元）
-    val totalWin: Long,         // 总中奖（元）
+    val grossWin: Long,         // 税前总中奖（元）
+    val totalTax: Long,         // 代扣个人所得税（元，单注>1万全额20%）
+    val totalWin: Long,         // 实际到手（税后，元）
     val prizeCounts: IntArray,  // 下标 1..9：各奖级命中注数
-    val prizeAmounts: LongArray,// 下标 1..9：各奖级总奖金（元）
+    val prizeAmounts: LongArray,// 下标 1..9：各奖级总奖金（税前，元）
     val bigWins: List<BigWin>,  // 一/二等奖明细
     val elapsedMs: Long
 ) {
@@ -61,8 +63,9 @@ data class TrackRecord(
     val mode: SimMode,
     val notes: Int,             // 本期购买注数
     val cost: Long,
-    val win: Long,
-    val wonNotes: List<WonNote> // 本期全部中奖注
+    val win: Long,              // 本期实际到手（税后）
+    val tax: Long,              // 本期代扣个税
+    val wonNotes: List<WonNote> // 本期全部中奖注（amount 为税前单注/合计）
 )
 
 /**
@@ -97,6 +100,8 @@ class SimulationEngine(context: Context) {
         val bigWins = ArrayList<BigWin>()
         var totalNotes = 0L
         var totalCost = 0L
+        var grossWin = 0L
+        var totalTax = 0L
         var totalWin = 0L
 
         for ((index, draw) in draws.withIndex()) {
@@ -109,10 +114,12 @@ class SimulationEngine(context: Context) {
                 val level = LottoRules.judge(config.fixedFront, config.fixedBack, drawFront, drawBack)
                 if (level > 0) {
                     levelCountThisDraw[level] = config.notesPerDraw
-                    val amount = prizeOf(level, draw) * config.notesPerDraw
+                    val perNote = prizeOf(level, draw)
+                    val gross = perNote * config.notesPerDraw
+                    val tax = LottoRules.taxOf(perNote) * config.notesPerDraw
                     counts[level] += config.notesPerDraw
-                    amounts[level] += amount
-                    totalWin += amount
+                    amounts[level] += gross
+                    grossWin += gross; totalTax += tax; totalWin += gross - tax
                 }
             } else {
                 repeat(config.notesPerDraw) {
@@ -121,9 +128,10 @@ class SimulationEngine(context: Context) {
                     if (level > 0) {
                         levelCountThisDraw[level]++
                         val amount = prizeOf(level, draw)
+                        val tax = LottoRules.taxOf(amount)
                         counts[level]++
                         amounts[level] += amount
-                        totalWin += amount
+                        grossWin += amount; totalTax += tax; totalWin += amount - tax
                     }
                 }
             }
@@ -150,6 +158,8 @@ class SimulationEngine(context: Context) {
             totalDraws = draws.size,
             totalNotes = totalNotes,
             totalCost = totalCost,
+            grossWin = grossWin,
+            totalTax = totalTax,
             totalWin = totalWin,
             prizeCounts = counts,
             prizeAmounts = amounts,
@@ -231,6 +241,7 @@ class SimulationEngine(context: Context) {
                     notes = o.optInt("c"),
                     cost = o.optLong("cost"),
                     win = o.optLong("win"),
+                    tax = o.optLong("tax", 0L),
                     wonNotes = (0 until won.length()).mapNotNull { j ->
                         val w = won.optJSONObject(j) ?: return@mapNotNull null
                         WonNote(
@@ -267,19 +278,22 @@ class SimulationEngine(context: Context) {
         return newRecords
     }
 
-    /** 单期模拟购买（跟踪模式）：返回该期记录（含中奖注明细） */
+    /** 单期模拟购买（跟踪模式）：返回该期记录（含中奖注明细，win 为税后到手） */
     private fun simulateOneDraw(draw: Draw, config: TrackConfig, random: Random): TrackRecord {
         val drawFront = draw.front.toSet()
         val drawBack = draw.back.toSet()
         val won = ArrayList<WonNote>()
-        var win = 0L
+        var gross = 0L
+        var tax = 0L
 
         if (config.mode == SimMode.FIXED && config.fixedFront.size == 5 && config.fixedBack.size == 2) {
             val level = LottoRules.judge(config.fixedFront, config.fixedBack, drawFront, drawBack)
             if (level > 0) {
-                val amount = prizeOf(level, draw) * config.notesPerDraw
-                win += amount
-                won.add(WonNote(config.fixedFront.sorted(), config.fixedBack.sorted(), level, amount))
+                val perNote = prizeOf(level, draw)
+                val g = perNote * config.notesPerDraw
+                val t = LottoRules.taxOf(perNote) * config.notesPerDraw
+                gross += g; tax += t
+                won.add(WonNote(config.fixedFront.sorted(), config.fixedBack.sorted(), level, g))
             }
         } else {
             repeat(config.notesPerDraw) {
@@ -287,7 +301,8 @@ class SimulationEngine(context: Context) {
                 val level = LottoRules.judge(f, b, drawFront, drawBack)
                 if (level > 0) {
                     val amount = prizeOf(level, draw)
-                    win += amount
+                    val t = LottoRules.taxOf(amount)
+                    gross += amount; tax += t
                     won.add(WonNote(f.sorted(), b.sorted(), level, amount))
                 }
             }
@@ -297,7 +312,8 @@ class SimulationEngine(context: Context) {
             drawFront = draw.front, drawBack = draw.back,
             mode = config.mode, notes = config.notesPerDraw,
             cost = config.notesPerDraw * LottoRules.NOTE_PRICE,
-            win = win, wonNotes = won
+            win = gross - tax, tax = tax,
+            wonNotes = won
         )
     }
 
@@ -309,7 +325,7 @@ class SimulationEngine(context: Context) {
                     .put("n", r.num).put("t", r.time)
                     .put("df", JSONArray(r.drawFront)).put("db", JSONArray(r.drawBack))
                     .put("m", r.mode.name).put("c", r.notes)
-                    .put("cost", r.cost).put("win", r.win)
+                    .put("cost", r.cost).put("win", r.win).put("tax", r.tax)
                     .put("won", JSONArray().apply {
                         r.wonNotes.forEach { w ->
                             put(JSONObject()
@@ -338,10 +354,12 @@ class SimulationEngine(context: Context) {
         var notes = 0L
         var cost = 0L
         var win = 0L
+        var tax = 0L
         for (r in records) {
             notes += r.notes
             cost += r.cost
             win += r.win
+            tax += r.tax
             for (w in r.wonNotes) {
                 // 守号模式一条 WonNote 代表整期 notes 注；机选模式一条代表 1 注
                 val cnt = if (r.mode == SimMode.FIXED) r.notes else 1
@@ -354,7 +372,7 @@ class SimulationEngine(context: Context) {
         }
         return SimResult(
             totalDraws = records.size, totalNotes = notes,
-            totalCost = cost, totalWin = win,
+            totalCost = cost, grossWin = win + tax, totalTax = tax, totalWin = win,
             prizeCounts = counts, prizeAmounts = amounts,
             bigWins = bigWins, elapsedMs = 0
         )

@@ -146,9 +146,11 @@ fun DataScreen(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("说明", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "· 一、二等奖为浮动奖金，统计使用当期实际单注奖金\n" +
+                        "· 本工具为汪苏蕊的梦想实验室，仅供概率模拟与娱乐\n" +
+                            "· 一、二等奖为浮动奖金，统计使用当期实际单注奖金\n" +
+                            "· 单注奖金超 1 万元按偶然所得 20% 代扣个税（1 万元及以下免税），到手为税后\n" +
                             "· 模拟不含追加投注（3 元/注玩法）\n" +
-                            "· 本工具仅作概率模拟与娱乐，不构成任何购彩建议；理性购彩，量力而行",
+                            "· 不构成任何购彩建议；理性购彩，量力而行",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

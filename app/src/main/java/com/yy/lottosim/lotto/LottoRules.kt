@@ -22,6 +22,21 @@ object LottoRules {
     /** 全部号码组合数：C(35,5) * C(12,2)，一等奖概率的倒数 */
     const val TOTAL_COMBINATIONS = 324_632L * 66L // 21,425,712
 
+    /**
+     * 中奖个税（偶然所得）：单注奖金 ≤ 10000 元免税（含），超过则全额按 20% 计税。
+     * 口径依据：电脑彩票以单注奖金为一次中奖收入（财税〔1998〕12号及2024年四部门公告），
+     * 兑奖机构代扣代缴，到手为税后。
+     */
+    const val TAX_RATE = 0.20
+    const val TAX_FREE_LIMIT = 10_000L
+
+    /** 单注奖金的个税额（免税返回 0） */
+    fun taxOf(amountPerNote: Long): Long =
+        if (amountPerNote > TAX_FREE_LIMIT) amountPerNote / 5 else 0L
+
+    /** 单注奖金的税后到手金额 */
+    fun netOfTax(amountPerNote: Long): Long = amountPerNote - taxOf(amountPerNote)
+
     /** 机选一注：前区 5 个（1-35 不重复）+ 后区 2 个（1-12 不重复） */
     fun randomNote(random: Random = Random.Default): Pair<Set<Int>, Set<Int>> {
         val front = (1..FRONT_MAX).shuffled(random).take(FRONT_PICK).toSet()

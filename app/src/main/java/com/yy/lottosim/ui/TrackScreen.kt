@@ -56,7 +56,7 @@ fun TrackScreen(
             Column {
                 Text("持续跟踪", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "从今天起每期开奖自动比对一次，看长期坚持买下去的真实轨迹",
+                    "从今天起每期开奖自动比对一次，见证汪苏蕊坚持买下去的真实轨迹",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -114,7 +114,7 @@ fun TrackScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("累计战绩", style = MaterialTheme.typography.titleMedium)
+                        Text("汪苏蕊的累计战绩", style = MaterialTheme.typography.titleMedium)
                         Text(
                             if (summary.net >= 0) "净赚 ${formatMoney(summary.net)}" else "净亏 ${formatMoney(summary.net)}",
                             fontSize = 26.sp,
@@ -127,8 +127,12 @@ fun TrackScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("已跟 ${summary.totalDraws} 期 · ${formatCount(summary.totalNotes)} 注")
-                            Text("投入 ${formatMoney(summary.totalCost)} · 中奖 ${formatMoney(summary.totalWin)}")
+                            Text("投入 ${formatMoney(summary.totalCost)}")
                         }
+                        Text(
+                            "税前 ${formatMoney(summary.grossWin)} · 代扣个税 -${formatMoney(summary.totalTax)} · 到手 ${formatMoney(summary.totalWin)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         if (summary.bigWins.isNotEmpty()) {
                             Text(
                                 "🎉 大奖：${summary.bigWins.joinToString { "${LottoRules.levelName(it.level)}×${it.count}" }}",
@@ -143,8 +147,8 @@ fun TrackScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        if (enabled) "跟踪已开启：等下一期开奖（每周一/三/六 21:25 后），打开 APP 即自动比对"
-                        else "开启开关开始跟踪；或先去「回放」页体验 10 年快进",
+                        if (enabled) "跟踪已开启：等下一期开奖（每周一/三/六 21:25 后），汪苏蕊打开 APP 即自动比对"
+                        else "开启开关，开始记录汪苏蕊的每一期；或先去「回放」页体验 10 年快进",
                         Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -187,7 +191,7 @@ fun TrackScreen(
                                 "${LottoRules.levelName(w.level)}" +
                                     (if (r.mode == SimMode.FIXED) " ×${r.notes} 注" else "") +
                                     " " + LottoRules.formatNote(w.front.toSet(), w.back.toSet()) +
-                                    " +${formatMoney(w.amount)}"
+                                    " 到手 +${formatMoney(LottoRules.netOfTax(w.amount))}"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
